@@ -39,6 +39,7 @@ import {
 
 let treeIdCounter = 1;
 
+// 合并默认值
 const mergeTheme = props => {
   const merged = {
     ...props,
@@ -85,12 +86,15 @@ class ReactSortableTree extends Component {
       slideRegionSize,
     } = mergeTheme(props);
 
+    // 内部管理DND
     this.dndManager = new DndManager(this);
 
     // Wrapping classes for use with react-dnd
     this.treeId = `rst__${treeIdCounter}`;
     treeIdCounter += 1;
+    // 拖拽类型
     this.dndType = dndType || this.treeId;
+    // 创建一个可拖拽的content
     this.nodeContentRenderer = this.dndManager.wrapSource(nodeContentRenderer);
     this.treePlaceholderRenderer = this.dndManager.wrapPlaceholder(
       TreePlaceholder
@@ -357,6 +361,8 @@ class ReactSortableTree extends Component {
   }
 
   startDrag({ path }) {
+    // 开始拖动的时候，将被拖动元素从数据中移除
+    // draggingTreeData 描述拖动过程中树的数据，会在拖动结束后应用到
     this.setState(prevState => {
       const {
         treeData: draggingTreeData,
@@ -427,6 +433,10 @@ class ReactSortableTree extends Component {
   }
 
   endDrag(dropResult) {
+    console.log('endDrag:', dropResult, this.props.onAdd);
+    const {
+      onAdd,
+    } = this.props;
     const { instanceProps } = this.state;
 
     const resetTree = () =>
@@ -442,6 +452,7 @@ class ReactSortableTree extends Component {
     if (!dropResult) {
       resetTree();
     } else if (dropResult.treeId !== this.treeId) {
+      // source 被放置到了别的树上
       // The node was dropped in an external drop target or tree
       const { node, path, treeIndex } = dropResult;
       let shouldCopy = this.props.shouldCopyOnOutsideDrop;
@@ -465,6 +476,11 @@ class ReactSortableTree extends Component {
           getNodeKey: this.props.getNodeKey,
         });
       }
+      onAdd && onAdd({
+        preTreeData: instanceProps.treeData,
+        nextTreeData: treeData,
+        node,
+      });
 
       this.props.onChange(treeData);
 
@@ -482,7 +498,22 @@ class ReactSortableTree extends Component {
   }
 
   drop(dropResult) {
-    this.moveNode(dropResult);
+    const {
+      type,
+    } = dropResult;
+    const callback = (modifiedDropResult) => {
+      this.moveNode(modifiedDropResult || dropResult);
+    };
+    const propName = `on${type.substr(0,1).toUpperCase()}${type.substr(1)}Drop`
+    if(this.props[propName] !== undefined){
+      this.props[propName](dropResult, callback);
+    } else {
+      callback();
+    }
+
+    // if(dropResult.treeId !== this.treeId){
+    //   onAdd && onAdd(dropResult2);
+    // }
   }
 
   canNodeHaveChildren(node) {
@@ -582,7 +613,6 @@ class ReactSortableTree extends Component {
       treeId: this.treeId,
       rowDirection,
     };
-
     return (
       <TreeNodeRenderer
         style={style}

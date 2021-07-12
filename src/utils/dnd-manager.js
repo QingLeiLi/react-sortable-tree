@@ -117,6 +117,7 @@ export default class DndManager {
       return false;
     }
 
+    // 获取上一行的对象
     const rowAbove = dropTargetProps.getPrevRow();
     const abovePath = rowAbove ? rowAbove.path : [];
     const aboveNode = rowAbove ? rowAbove.node : {};
@@ -159,8 +160,10 @@ export default class DndManager {
   wrapSource(el) {
     const nodeDragSource = {
       beginDrag: props => {
+        console.log('beginDrag');
         this.startDrag(props);
 
+        // 返回正在拖动的元素描述
         return {
           node: props.node,
           parentNode: props.parentNode,
@@ -171,6 +174,8 @@ export default class DndManager {
       },
 
       endDrag: (props, monitor) => {
+        console.log('endDrag');
+        // 如果被拖动元素放置到了其他元素上，getDropResult 会返回 target drop 方法的返回值
         this.endDrag(monitor.getDropResult());
       },
 
@@ -201,7 +206,15 @@ export default class DndManager {
   wrapTarget(el) {
     const nodeDropTarget = {
       drop: (dropTargetProps, monitor, component) => {
+        console.log('drop', );
+        const dragItem = monitor.getItem();
+        let type = 'tree';
+        if(!dragItem.treeIndex){
+          type = 'add';
+        }
         const result = {
+          type,
+          dropResult: monitor.getDropResult(),
           node: monitor.getItem().node,
           path: monitor.getItem().path,
           treeIndex: monitor.getItem().treeIndex,
@@ -216,6 +229,7 @@ export default class DndManager {
       },
 
       hover: (dropTargetProps, monitor, component) => {
+        console.log('hover');
         const targetDepth = this.getTargetDepth(
           dropTargetProps,
           monitor,
